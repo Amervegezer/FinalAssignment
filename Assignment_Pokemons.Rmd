@@ -1,0 +1,197 @@
+---
+title: "Assignment_Pokemons"
+author: "AMerveGezer"
+date: "21 Ocak 2018"
+output: html_document
+---
+---
+title: "Which Pokemon Types/Generations are the greatest"
+author: "Aynur Merve Gezer"
+output: html_document
+---
+**Variables in the data**
+*Hashtag*: ID for each pokemon
+*Name*: Name of each pokemon
+*Type 1*: Each pokemon has a type, this determines weakness/resistance to attacks
+*Type 2*: Some pokemon are dual type and have 2
+*Total*: sum of all stats that come after this, a general guide to how strong a pokemon is
+*HP*: hit points, or health, defines how much damage a pokemon can withstand before fainting
+*Attack*: the base modifier for normal attacks (eg. Scratch, Punch)
+*Defense*: the base damage resistance against normal attacks
+*SP Atk*: special attack, the base modifier for special attacks (e.g. fire blast, bubble beam)
+*SP Def*: the base damage resistance against special attacks
+*Speed*: determines which pokemon attacks first each round
+---
+
+Source: https://www.kaggle.com/abcsds/pokemon
+
+**1.Executive Summary**
+
+The analysis show that there are more Pokemons with only Type 1 kind. Exploratory analysis show that Pokemon's who have higher HP does not necessarily have low defense power and Water kind of Pokemons within the Type 1 group, have the highest speed. Pearson correlation analysis show that Pokemons attack power and defense power are not significantly correlated [r(798)=0.44 p=2.21]. Lastly, one-way ANOVA analysis showed that there are no significant differences between the generations (1 to 6) and pokemons total power[F(1, 798)=1.87 p=0.172].
+
+**2. Load and transform data**
+```{r}
+library(tidyverse)
+
+setwd("C:/Users/merve/Desktop")
+
+pokemon_data <- read_csv("C:/Users/merve/Desktop/Pokemon.csv")
+pokemon_data
+
+drop <- c("#")
+pokemon_data = pokemon_data[,!(names(pokemon_data) %in% drop)] 
+
+```
+
+**2. Data exploration**
+
+*2.a. missing values*
+```{r}
+sapply(pokemon_data,function(x) sum(is.na(x)))  
+
+```
+
+Not all pokemons have 2 types therefore, Type 2 variable has missing values.
+
+*2.b. Do Pokemons with higher HP have lower Defense?*
+
+```{r}
+pokemon_data %>% 
+group_by(HP) %>% 
+ggplot() +
+aes(y=Defense, x=HP, group=Generation, color=Generation) +
+geom_line (size=0.5) +
+geom_point( size=2, shape=18, fill = "white")
+
+```
+
+Usually having higher HP means higher health, therefore these pokemons do not need as much defense power as pokemons with lower HP. This is not necesarily the case according to this data. There are in particular 2 pokemons from Generation 1 and 2 with the higest HP and have almost the lowest defense power. However the rest of the pokemons show mostly mixed HPs and defense comparisons. 
+
+
+*2.c. Which kind of Pokemon within Type 1 group has the highest speed?*
+
+
+```{r}
+pokemon_data %>%
+  ggplot() + 
+  aes(x=`Type 1`, fill = Speed) +
+  geom_bar() +
+  labs(title = "Speed by kinds of Pokemons within Type 1 group", x ="Pokemon kinds within Type 1 group", y = "Speed")
+```
+
+Water kind pokemons have the highest speed within the Type 1 group, when the flying kind shows the lowest speed overall. 
+
+
+
+**3. First hypothesis: Do Pokemons' Attack power correlate with their Defense power **
+
+```{r}
+library("ggpubr")
+
+```
+
+*Checking distribution for attack power:* 
+
+```{r}
+ggqqplot(pokemon_data$Attack, ylab = "Attack power")
+
+```
+
+*Checking distribution for defense:*
+
+
+```{r}
+ggqqplot(pokemon_data$Defense, ylab = "Defense power")
+
+```
+
+
+From the normality plots, it can be concluded that both Pokemons' Attack power and defense power are normal distributed.
+
+*Pearson's correlation:*
+
+```{r}
+correlation <-cor.test(pokemon_data$Attack, pokemon_data$Defense,  method = "pearson")
+correlation
+```
+
+
+The correlation coefficient between Attack power and Defense power are 0.4387 and the p-value is <2.210{-16}. This means as Pokemons' Attack power increases, the power of defense also increases. However, this association is medium and is not significant.r(798)=0.44 p=2.21
+
+
+**4. Second hypothesis: Do the generations predict Pokemons' total power** 
+
+
+*Visualising with boxplot:*  
+    
+```{r}
+library("ggpubr")
+
+ggboxplot(pokemon_data, x = "Generation", y = "Total", 
+          color = "Generation", palette = c(rainbow(6)),
+          order = c("1", "2", "3", "4", "5", "6"),
+          ylab = "Total Power", xlab = "Generation")
+
+```
+    
+Boxplot illustrates that there is an outlier on the generation 1 pokemon when we look at their attack power. 
+
+
+
+*Anova test:*
+
+```{r}
+pokemon_anova <- aov(Total ~ Generation, data = pokemon_data)
+
+summary(pokemon_anova)
+```
+As the p-value is higher than the significance level 0.05, we can conclude that there are no significant differences between the generations and total power [F(1, 798)=1.87 p=0.172]. This means that the Pokemons do not show a statical difference in total power when compared to different generation groups. 
+
+
+*Check homogeneity of variances:*
+
+
+```{r}
+plot(pokemon_anova, 1)
+```
+
+
+Points 165 and 427 are detected as outliers, which can affect normality and homogeneity of variance. Removing outliers can help meeting ANOVA test assumptions.
+
+
+
+*Check normality assumption:*
+
+
+```{r}
+plot(pokemon_anova, 2)
+```
+
+Most of the points approximately fall along the reference line, we can assume normality.
+
+*Remove residuals:*
+
+
+```{r}
+
+aov_residuals <- residuals(object = pokemon_anova)
+
+```
+
+*Run Shapiro-Wilk test:*
+
+
+```{r}
+shapiro.test(x = aov_residuals )
+```
+
+P value is greater than 0.05 therefore, Shapiro-Wilk test on the ANOVA residuals (W = 0.98, p = 2.63) which finds no indication that normality is violated.Therefore ANOVA assumptions were met.
+
+
+
+**Conclusion:**
+Altough there is an association between Pokemons' attack power and defense power, this association is not sigificant. Additionally, there were no significant differences between the generations and total power of pokemons. 
+
+
+**The End**
+
